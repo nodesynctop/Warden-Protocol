@@ -14,7 +14,7 @@ Explorer: https://warden-explorer.paranorm.pro/warden/staking
 
 Explorer NodeSync: https://explorer.nodesync.top/Warden-Testnet/staking
 
-**Faucet on your node, change your_address: ** 
+#### Faucet on your node, change your_address:
 ```
 curl -XPOST -d '{"address": "warden1nxxxxxxxxxxxxxxxxxxxxxxxx"}' https://faucet.buenavista.wardenprotocol.org
 ```
