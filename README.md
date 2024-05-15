@@ -148,5 +148,48 @@ rm -rf $HOME/warden_auto && \
 rm -f $(which wardend) && \
 rm -rf $HOME/warden
 ```
+# 5. State Sync
+```
+sudo systemctl stop wardend
 
+cp $HOME/.warden/data/priv_validator_state.json $HOME/.warden/priv_validator_state.json.backup
+
+wardend tendermint unsafe-reset-all --home $HOME/.warden
+
+peers=$(curl -s https://files.nodesync.top/Warden/peers.txt)
+
+SNAP_RPC="https://warden-testnet-rpc.nodesync.top:443"
+
+sed -i.bak -e "s/^persistent_peers *=.*/persistent_peers = \"$peers\"/" $HOME/.warden/config/config.toml 
+
+LATEST_HEIGHT=$(curl -s $SNAP_RPC/block | jq -r .result.block.header.height);
+BLOCK_HEIGHT=$((LATEST_HEIGHT - 1000));
+TRUST_HASH=$(curl -s "$SNAP_RPC/block?height=$BLOCK_HEIGHT" | jq -r .result.block_id.hash) 
+
+echo $LATEST_HEIGHT $BLOCK_HEIGHT $TRUST_HASH && sleep 2
+
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ;
+s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$SNAP_RPC,$SNAP_RPC\"| ;
+s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$BLOCK_HEIGHT| ;
+s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"| ;
+s|^(seeds[[:space:]]+=[[:space:]]+).*$|\1\"\"|" $HOME/.warden/config/config.toml
+
+mv $HOME/.warden/priv_validator_state.json.backup $HOME/.warden/data/priv_validator_state.json
+
+sudo systemctl restart wardend && sudo journalctl -u wardend -f --no-hostname -o cat
+```
+# 6. Snapshot
+```
+sudo systemctl stop wardend
+
+cp $HOME/.warden/data/priv_validator_state.json $HOME/.warden/priv_validator_state.json.backup
+
+rm -rf $HOME/.warden/data $HOME/.warden/wasmPath
+
+curl https://files.nodesync.top/Warden/warden.tar.lz4 | lz4 -dc - | tar -xf - -C $HOME/.warden
+
+mv $HOME/.warden/priv_validator_state.json.backup $HOME/.warden/data/priv_validator_state.json
+
+sudo systemctl restart wardend && sudo journalctl -u wardend -f --no-hostname -o cat
+```
 
